@@ -56,6 +56,16 @@ add_executable(var_sized_benchmark var_sized_benchmark.cc)
 target_link_libraries(var_sized_benchmark var_sized absl::memory benchmark::benchmark_main)
 add_test(NAME var_sized_benchmark COMMAND var_sized_benchmark)
 
+# IntOrPtr
+
+add_library(int_or_ptr INTERFACE)
+target_include_directories(int_or_ptr INTERFACE .)
+target_link_libraries(int_or_ptr INTERFACE ref absl::optional absl::utility absl::variant)
+
+add_executable(int_or_ptr_test int_or_ptr_test.cc)
+target_link_libraries(int_or_ptr_test int_or_ptr absl::strings gmock gtest_main)
+add_test(NAME int_or_ptr_test COMMAND int_or_ptr_test)
+
 # Copy on Write.
 
 add_library(copy_on_write INTERFACE)
