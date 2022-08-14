@@ -174,8 +174,8 @@ class Ref final
       : Base(buffer) {}
 
   template <typename U = std::remove_const<T>,
-            typename std::enable_if<!std::is_same<U, T>::value>::type>
-  Ref(Ref<U, Alloc> &&unique) : Ref(unique.move_buffer()) {}
+            typename std::enable_if<!std::is_same<U, T>::value, int>::type = 0>
+  Ref(Ref<U, Alloc> &&unique) : Ref(std::move(unique).move_buffer()) {}
 
   Ref(Ref const &other) = default;
   Ref(Ref &&other) = default;

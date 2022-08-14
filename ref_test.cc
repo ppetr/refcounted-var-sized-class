@@ -56,6 +56,13 @@ TEST_F(RefTest, Share) {
   EXPECT_EQ(shared->value_, 42);
 }
 
+TEST_F(RefTest, ShareImplicit) {
+  Ref<Foo> owned = New<Foo, int&, int>(counter_, 42);
+  Ref<const Foo> shared(std::move(owned));
+  EXPECT_EQ(counter_, 1);
+  EXPECT_EQ(shared->value_, 42);
+}
+
 TEST_F(RefTest, ShareTwice) {
   Ref<Foo> owned = New<Foo, int&, int>(counter_, 42);
   Ref<const Foo> shared(std::move(owned).Share());
