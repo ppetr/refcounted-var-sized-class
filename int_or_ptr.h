@@ -77,8 +77,6 @@ class IntOrValue {
   }
   Ptr* ptr() { return has_ptr() ? &value_ : nullptr; }
 
-  // TODO: Add `operator==` and `!=`.
-
  private:
   void Clear() {
     if (ptr() != nullptr) {
@@ -138,8 +136,8 @@ class IntOrPtr {
   bool has_ptr() const { return value_.has_ptr(); }
   absl::optional<intptr_t> number() const { return value_.number(); }
 
-  T* ptr() {
-    Ref<T>* value = value_.ptr();
+  T* ptr() const {
+    Ref<T>* value = const_cast<Ref<T>*>(value_.ptr());
     return (value == nullptr) ? nullptr : &**value;
   }
 
@@ -153,7 +151,19 @@ class IntOrPtr {
     }
   }
 
-  // TODO: Add `operator==` and `!=`.
+  bool operator==(const IntOrPtr& other) const {
+    T* value = ptr();
+    if (value == nullptr) {
+      return number() == other.number();
+    } else {
+      T* other_value = other.ptr();
+      if (other_value == nullptr) {
+        return false;
+      }
+      return *value == *other_value;
+    }
+  }
+  bool operator!=(const IntOrPtr& other) const { return !(*this == other); }
 
   internal::IntOrValue<Ref<T>> value_;
 

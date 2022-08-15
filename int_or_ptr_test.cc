@@ -160,6 +160,18 @@ TEST(IntOrPtrTest, CopyAssignment) {
   EXPECT_EQ(counter, 0);
 }
 
+TEST(IntOrPtrTest, Equality) {
+  EXPECT_EQ(IntOrPtr<std::string>(42), IntOrPtr<std::string>(42));
+  EXPECT_NE(IntOrPtr<std::string>(42), IntOrPtr<std::string>(73));
+  EXPECT_NE(IntOrPtr<std::string>(42),
+            IntOrPtr<std::string>(absl::in_place, "Foo"));
+  EXPECT_NE(IntOrPtr<intptr_t>(42), IntOrPtr<intptr_t>(absl::in_place, 42));
+  EXPECT_EQ(IntOrPtr<std::string>(absl::in_place, "Foo"),
+            IntOrPtr<std::string>(absl::in_place, "Foo"));
+  EXPECT_NE(IntOrPtr<std::string>(absl::in_place, "Foo"),
+            IntOrPtr<std::string>(absl::in_place, "Bar"));
+}
+
 // TODO: Add equality tests.
 
 }  // namespace
