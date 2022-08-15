@@ -43,17 +43,17 @@ struct Foo {
 TEST(IntOrPtrTest, ConstructionByDefault) {
   IntOrPtr<const Foo> value;
   ASSERT_TRUE(value.has_number());
-  ASSERT_FALSE(value.has_ref());
+  ASSERT_FALSE(value.has_ptr());
   EXPECT_THAT(value.number(), Optional(0));
-  EXPECT_THAT(value.ref(), Eq(nullptr));
+  EXPECT_THAT(value.ptr(), Eq(nullptr));
 }
 
 TEST(IntOrPtrTest, ConstructionOfNumber) {
   IntOrPtr<const Foo> value(42);
   ASSERT_TRUE(value.has_number());
-  ASSERT_FALSE(value.has_ref());
+  ASSERT_FALSE(value.has_ptr());
   EXPECT_THAT(value.number(), Optional(42));
-  EXPECT_THAT(value.ref(), Eq(nullptr));
+  EXPECT_THAT(value.ptr(), Eq(nullptr));
   EXPECT_THAT(value.Variant(), VariantWith<intptr_t>(42));
 }
 
@@ -71,9 +71,9 @@ TEST(IntOrPtrTest, ConstructionOfObject) {
     IntOrPtr<const Foo> value(absl::in_place, counter, 42);
     EXPECT_EQ(counter, 1);
     ASSERT_FALSE(value.has_number());
-    ASSERT_TRUE(value.has_ref());
+    ASSERT_TRUE(value.has_ptr());
     EXPECT_THAT(value.number(), absl::nullopt);
-    EXPECT_THAT(value.ref(), Pointee(Field(&Foo::value_, 42)));
+    EXPECT_THAT(value.ptr(), Pointee(Field(&Foo::value_, 42)));
     EXPECT_THAT(value.Variant(), VariantWith<std::reference_wrapper<const Foo>>(
                                      Field(&Foo::value_, 42)));
   }
@@ -111,7 +111,7 @@ TEST(IntOrPtrTest, MoveConstructionOfConstFromNonConst) {
   int counter = 0;
   {
     IntOrPtr<const Foo> object(IntOrPtr<Foo>(absl::in_place, counter, 73));
-    EXPECT_THAT(object.ref(), Pointee(Field(&Foo::value_, 73)));
+    EXPECT_THAT(object.ptr(), Pointee(Field(&Foo::value_, 73)));
     EXPECT_EQ(counter, 1);
   }
   EXPECT_EQ(counter, 0);

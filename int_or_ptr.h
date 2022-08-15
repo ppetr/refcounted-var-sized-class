@@ -37,12 +37,12 @@ class IntOrValue {
                 "Internal error: Ptr must have the same size as intptr_t");
   IntOrValue() : IntOrValue(0) {}
   explicit IntOrValue(intptr_t value) : number_((value << 1) | 1) {
-    assert(ref() == nullptr);
+    assert(ptr() == nullptr);
   }
   template <typename... Args>
   explicit IntOrValue(absl::in_place_t, Args&&... args)
       : value_(std::forward<Args>(args)...) {
-    assert(ref() != nullptr);
+    assert(ptr() != nullptr);
   }
 
   IntOrValue(IntOrValue&& that) : IntOrValue() { *this = std::move(that); }
@@ -53,7 +53,7 @@ class IntOrValue {
   }
   IntOrValue& operator=(const IntOrValue& that) {
     Clear();
-    if (that.has_ref()) {
+    if (that.has_ptr()) {
       new (&value_) Ptr(that.value_);
     } else {
       number_ = that.number_;
@@ -64,24 +64,24 @@ class IntOrValue {
   ~IntOrValue() { Clear(); }
 
   bool has_number() const { return number_ & 1; }
-  bool has_ref() const { return !has_number(); }
+  bool has_ptr() const { return !has_number(); }
 
   absl::optional<intptr_t> number() const {
     return has_number() ? absl::make_optional(number_ >> 1) : absl::nullopt;
   }
 
-  const Ptr* ref() const {
+  const Ptr* ptr() const {
     // Here we rely on `cxx_unrestricted_unions`: We query `number_` in all
     // cases, even if the populated value is `value_`.
-    return has_ref() ? &value_ : nullptr;
+    return has_ptr() ? &value_ : nullptr;
   }
-  Ptr* ref() { return has_ref() ? &value_ : nullptr; }
+  Ptr* ptr() { return has_ptr() ? &value_ : nullptr; }
 
   // TODO: Add `operator==` and `!=`.
 
  private:
   void Clear() {
-    if (ref() != nullptr) {
+    if (ptr() != nullptr) {
       value_.~Ref();
       number_ = 0;
     }
@@ -111,8 +111,8 @@ class IntOrPtr {
  public:
   IntOrPtr() : IntOrPtr(0) {}
   explicit IntOrPtr(intptr_t value) : value_(value) { assert(has_number()); }
-  explicit IntOrPtr(Ref<T> ref) : value_(absl::in_place, std::move(ref)) {
-    assert(has_ref());
+  explicit IntOrPtr(Ref<T> ptr) : value_(absl::in_place, std::move(ptr)) {
+    assert(has_ptr());
   }
   template <typename... Args>
   explicit IntOrPtr(absl::in_place_t, Args&&... args)
@@ -121,12 +121,11 @@ class IntOrPtr {
   template <typename U = std::remove_const<T>,
             typename std::enable_if<!std::is_same<U, T>::value, int>::type = 0>
   IntOrPtr(IntOrPtr<U>&& unique) {
-    auto* ref_ptr = unique.value_.ref();
-    if (ref_ptr == nullptr) {
+    auto* value = unique.value_.ptr();
+    if (value == nullptr) {
       value_ = internal::IntOrValue<Ref<T>>(*unique.number());
     } else {
-      value_ =
-          internal::IntOrValue<Ref<T>>(absl::in_place, std::move(*ref_ptr));
+      value_ = internal::IntOrValue<Ref<T>>(absl::in_place, std::move(*value));
     }
   }
 
@@ -136,21 +135,21 @@ class IntOrPtr {
   IntOrPtr& operator=(const IntOrPtr& that) = default;
 
   bool has_number() const { return value_.has_number(); }
-  bool has_ref() const { return value_.has_ref(); }
+  bool has_ptr() const { return value_.has_ptr(); }
   absl::optional<intptr_t> number() const { return value_.number(); }
 
-  T* ref() {
-    Ref<T>* ref_ptr = value_.ref();
-    return (ref_ptr == nullptr) ? nullptr : &**ref_ptr;
+  T* ptr() {
+    Ref<T>* value = value_.ptr();
+    return (value == nullptr) ? nullptr : &**value;
   }
 
   absl::variant<intptr_t, std::reference_wrapper<T>> Variant() {
     using result = absl::variant<intptr_t, std::reference_wrapper<T>>;
-    T* ptr = ref();
-    if (ptr == nullptr) {
+    T* value = ptr();
+    if (value == nullptr) {
       return result(absl::in_place_index<0>, *number());
     } else {
-      return result(absl::in_place_index<1>, *ptr);
+      return result(absl::in_place_index<1>, *value);
     }
   }
 
