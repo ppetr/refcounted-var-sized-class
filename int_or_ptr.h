@@ -141,7 +141,7 @@ class IntOrPtr {
     return (value == nullptr) ? nullptr : &**value;
   }
 
-  absl::variant<intptr_t, std::reference_wrapper<T>> Variant() {
+  absl::variant<intptr_t, std::reference_wrapper<T>> Variant() const {
     using result = absl::variant<intptr_t, std::reference_wrapper<T>>;
     T* value = ptr();
     if (value == nullptr) {
