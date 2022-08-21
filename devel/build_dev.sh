@@ -24,6 +24,6 @@ mkdir -p "$DIR"
 cd "$DIR"
 cmake "$@" "$BASE"
 while echo Restarting ; sleep 1 ; do
-  find "$BASE" -name '*.h' -or -name '*.cc' \
+  find "$BASE" -not -path '*/build/*' \( -name '*.h' -or -name '*.cc' \) \
     | CTEST_OUTPUT_ON_FAILURE=1 entr -d make -j all -k test
 done
