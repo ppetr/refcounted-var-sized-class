@@ -26,32 +26,53 @@ set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "")
 project(refcounted-var-sized CXX)
 
 include(FetchContent)
-if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER_EQUAL 3.24)
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        e2239ee6043f73722e7aa812a459f54a28552929  # release-1.11.0
-  FIND_PACKAGE_ARGS REQUIRED EXCLUDE_FROM_ALL NAMES googletest GTest
-)
-else()
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        e2239ee6043f73722e7aa812a459f54a28552929  # release-1.11.0
-)
-endif()
+function(FetchLibrary)
+    set(options)
+    set(oneValueArgs GIT_REPOSITORY GIT_TAG)
+    set(multiValueArgs FIND_PACKAGE_ARGS)
+    cmake_parse_arguments(
+        FETCH_LIBRARY "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+    set(package ${FETCH_LIBRARY_UNPARSED_ARGUMENTS})
+    if (package STREQUAL "")
+        message(FATAL_ERROR "No package (non-option) argument given" ${package})
+    endif()
+    set(find_package_args ${FETCH_LIBRARY_FIND_PACKAGE_ARGS})
+    list(REMOVE_ITEM find_package_args "REQUIRED")
+    find_package(${package} ${find_package_args} QUIET)
+    if(NOT ${package}_FOUND)
+        FetchContent_Declare(
+            ${package}
+            GIT_REPOSITORY ${FETCH_LIBRARY_GIT_REPOSITORY}
+            GIT_TAG        ${FETCH_LIBRARY_GIT_TAG}
+            )
+        FetchContent_MakeAvailable(${package})
+    endif()
+endfunction()
 
 # sudo apt install libbenchmark-dev libabsl-dev
-# TODO: Use `FetchContent` as for `googletest` above.
-find_package(absl REQUIRED)
+FetchLibrary(
+    absl
+    GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
+    GIT_TAG        8c0b94e793a66495e0b1f34a5eb26bd7dc672db0  # lts_2022_06_23
+    FIND_PACKAGE_ARGS REQUIRED NAMES absl
+    )
+
+FetchLibrary(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        e2239ee6043f73722e7aa812a459f54a28552929  # release-1.11.0
+    FIND_PACKAGE_ARGS REQUIRED NAMES googletest GTest
+    )
 
 # For the benchmarks below be sure to enable optimizations, for example:
 #   cmake -DBENCHMARK_ENABLE_LTO=true -DCMAKE_BUILD_TYPE=Release
 # See https://github.com/google/benchmark#debug-vs-release.
-# TODO: Use `FetchContent` as for `googletest` above.
-find_package(benchmark REQUIRED EXCLUDE_FROM_ALL)
-
-FetchContent_MakeAvailable(googletest)
+FetchLibrary(
+    benchmark
+    GIT_REPOSITORY https://github.com/google/benchmark.git
+    GIT_TAG        db55c89f31385f8105f56ac8245a51777e94a628
+    FIND_PACKAGE_ARGS REQUIRED NAMES benchmark
+    )
 
 # Var-sized and ref-counted structures.
 
