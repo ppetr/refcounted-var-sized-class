@@ -80,7 +80,7 @@ class IntOrValue {
  private:
   void Clear() {
     if (ptr() != nullptr) {
-      value_.~Ref();
+      value_.~Ptr();
       number_ = 0;
     }
   }
