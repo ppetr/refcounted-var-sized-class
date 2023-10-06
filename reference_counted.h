@@ -30,16 +30,15 @@ class Refcount {
 
   // Increments the reference count. Imposes no memory ordering.
   inline void Inc() {
-    // No need for any synchronization/ordering, as the value is not inspected
-    // at all.
-    count_.fetch_add(1, std::memory_order_relaxed);
+    // Other threads must observe the increment.
+    count_.fetch_add(1, std::memory_order_release);
   }
 
   // Returns whether the atomic integer is 1.
   inline bool IsOne() const {
     // This thread must observe the correct value, including any prior
     // modifications by other threads.
-    return count_.load(std::memory_order_acquire) == 1;
+    return count_.load(std::memory_order_consume) == 1;
   }
 
   // Returns `true` iff the counter's value is zero after the decrement
