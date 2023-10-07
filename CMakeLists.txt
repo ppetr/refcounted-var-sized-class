@@ -101,6 +101,7 @@ add_test(NAME var_sized_benchmark COMMAND var_sized_benchmark)
 add_library(int_or_ptr INTERFACE)
 target_include_directories(int_or_ptr INTERFACE .)
 target_link_libraries(int_or_ptr INTERFACE ref absl::optional absl::utility absl::variant)
+target_compile_features(int_or_ptr INTERFACE cxx_unrestricted_unions)
 
 add_executable(int_or_ptr_test int_or_ptr_test.cc)
 target_link_libraries(int_or_ptr_test int_or_ptr absl::strings gmock GTest::gtest_main)

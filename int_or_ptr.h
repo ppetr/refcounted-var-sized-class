@@ -31,8 +31,6 @@ namespace internal {
 template <typename Ptr>
 class IntOrValue {
  public:
-  static_assert(__has_feature(cxx_unrestricted_unions),
-                "IntOrValue relies on the unrestricted unions feature");
   static_assert(sizeof(intptr_t) == sizeof(Ptr),
                 "Internal error: Ptr must have the same size as intptr_t");
   IntOrValue() : IntOrValue(0) {}
