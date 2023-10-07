@@ -111,7 +111,7 @@ add_test(NAME int_or_ptr_test COMMAND int_or_ptr_test)
 
 add_library(copy_on_write INTERFACE)
 target_include_directories(copy_on_write INTERFACE .)
-target_link_libraries(copy_on_write INTERFACE ref absl::utility)
+target_link_libraries(copy_on_write INTERFACE ref absl::core_headers absl::utility)
 
 add_executable(copy_on_write_test copy_on_write_test.cc)
 target_link_libraries(copy_on_write_test copy_on_write absl::strings absl::utility GTest::gtest_main)

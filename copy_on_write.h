@@ -18,18 +18,17 @@
 #include <type_traits>
 #include <utility>
 
+#include "absl/base/attributes.h"
 #include "absl/utility/utility.h"
 #include "ref.h"
 
 namespace refptr {
 
 // Manages an instance of `T` on the heap. Copying `CopyOnWrite<T>` is as
-// cheap as copying a pointer. The actual copying of `T` is deferred until a
-// mutable reference is requested by `as_mutable`.
+// comparably cheap to copying a `shared_ptr`. The actual copying of `T` is
+// deferred until a mutable reference is requested by `as_mutable`.
 //
-// Important: `as_mutable` doesn't return a stable reference. Making a copy of
-// the class can cause this reference to change. Therefore it should never be
-// exposed externally (unless external callers are aware of this behavior).
+// Instances should be always passed by value, not by reference.
 template <typename T>
 class CopyOnWrite {
   static_assert(std::is_copy_constructible<T>::value,
@@ -45,6 +44,19 @@ class CopyOnWrite {
   CopyOnWrite& operator=(const CopyOnWrite&) = default;
   CopyOnWrite& operator=(CopyOnWrite&& that) = default;
 
+  // These operators are intentionally not qualified with `const` to
+  // incentivize passing the pointer by value.
+  const T& operator*() { return *ref_; }
+  const T* operator->() { return &this->operator*(); }
+
+  // If this instance is the sole owner of `T`, returns it.
+  // Otherwise makes a new copy on the heap, points this object to it, and
+  // returns the copy.
+  //
+  // Important: The returned reference is valid only until this pointer is
+  // copied or destroyed. Therefore callers should not store the returned
+  // reference and rather call `as_mutable()` repeatedly as needed.
+  // The `with` functions below provide a safer alternative.
   T& as_mutable() {
     auto as_owned = std::move(ref_).AttemptToClaim();
     Ref<T> owned = absl::holds_alternative<Ref<T>>(as_owned)
@@ -54,8 +66,20 @@ class CopyOnWrite {
     ref_ = std::move(owned).Share();
     return value;
   }
-  const T& operator*() const { return *ref_; }
-  const T* operator->() const { return &this->operator*(); }
+
+  // Modifies a copy of this instance with `mutator`, which receives `T&` as
+  // its only argument. Returns the modified copy.
+  template <typename F>
+  ABSL_MUST_USE_RESULT CopyOnWrite with(F&& mutator) const& {
+    return CopyOnWrite(*this).with(std::forward<F>(mutator));
+  }
+  // Consumes `*`this`` to modify it, making a copy of the pointed-to value if
+  // necessary, and returns a pointer to the result.
+  template <typename F>
+  ABSL_MUST_USE_RESULT CopyOnWrite with(F&& mutator) && {
+    std::forward<F>(mutator)(as_mutable());
+    return std::move(*this);
+  }
 
  private:
   Ref<const T> ref_;

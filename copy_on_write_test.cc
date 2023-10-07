@@ -39,15 +39,16 @@ TEST(CopyOnWriteTest, Moves) {
   EXPECT_EQ(cow.as_mutable(), kText);
 }
 
-TEST(CopyOnWriteTest, Copies) {
+TEST(CopyOnWriteTest, CopiesByWithMutation) {
   CopyOnWrite<std::string> original(absl::in_place, kText);
-  CopyOnWrite<std::string> cow = original;
+  CopyOnWrite<std::string> copy =
+      original.with([](std::string& s) { s = "other"; });
   // Original.
   EXPECT_EQ(*original, kText);
   EXPECT_EQ(original.as_mutable(), kText);
   // Copy.
-  EXPECT_EQ(*cow, kText);
-  EXPECT_EQ(cow.as_mutable(), kText);
+  EXPECT_EQ(*copy, "other");
+  EXPECT_EQ(copy.as_mutable(), "other");
 }
 
 }  // namespace
