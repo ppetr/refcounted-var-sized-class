@@ -38,7 +38,7 @@ class Refcount {
   inline bool IsOne() const {
     // This thread must observe the correct value, including any prior
     // modifications by other threads.
-    return count_.load(std::memory_order_consume) == 1;
+    return count_.load(std::memory_order_acquire) == 1;
   }
 
   // Returns `true` iff the counter's value is zero after the decrement
