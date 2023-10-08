@@ -14,7 +14,9 @@
 
 #include "copy_on_write.h"
 
+#include <memory>
 #include <string>
+#include <type_traits>
 
 #include "absl/strings/string_view.h"
 #include "absl/utility/utility.h"
@@ -22,6 +24,12 @@
 
 namespace refptr {
 namespace {
+
+static_assert(
+    std::is_same<
+        std::string,
+        std::pointer_traits<CopyOnWrite<std::string>>::element_type>::value,
+    "The element_type of CopyOnWrite is incorrect");
 
 constexpr absl::string_view kText = "Lorem ipsum dolor sit amet";
 

@@ -35,6 +35,8 @@ class CopyOnWrite {
                 "T must be copy-constructible");
 
  public:
+  using element_type = T;
+
   template <typename... Arg>
   explicit CopyOnWrite(absl::in_place_t, Arg&&... args)
       : ref_(New<T>(std::forward<Arg>(args)...).Share()) {}

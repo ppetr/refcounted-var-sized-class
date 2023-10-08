@@ -59,6 +59,8 @@ class RefBase;
 template <typename T, typename Alloc>
 class RefBase<T, Alloc, OwnershipTraits::shared> {
  public:
+  using element_type = T;
+
   RefBase(RefBase const &other) { (*this) = other; }
   RefBase(RefBase &&other) { (*this) = std::move(other); }
 
@@ -106,6 +108,8 @@ class RefBase<T, Alloc, OwnershipTraits::shared> {
 template <typename T, typename Alloc>
 class RefBase<T, Alloc, OwnershipTraits::unique> {
  public:
+  using element_type = T;
+
   RefBase(RefBase const &other) = delete;
   RefBase(RefBase &&other) { (*this) = std::move(other); }
 
@@ -207,7 +211,7 @@ Ref<const T, Alloc> RefBase<T, Alloc, OwnershipTraits::unique>::Share() && {
 }  // namespace internal
 
 template <typename T, typename... Arg>
-inline Ref<T> New(Arg &&... args) {
+inline Ref<T> New(Arg &&...args) {
   return Ref<T>(
       Refcounted<T, std::allocator<T>>::New({}, std::forward<Arg>(args)...));
 }
