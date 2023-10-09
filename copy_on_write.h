@@ -31,9 +31,6 @@ namespace refptr {
 // Instances should be always passed by value, not by reference.
 template <typename T>
 class CopyOnWrite {
-  static_assert(std::is_copy_constructible<T>::value,
-                "T must be copy-constructible");
-
  public:
   using element_type = T;
 
@@ -41,15 +38,13 @@ class CopyOnWrite {
   explicit CopyOnWrite(absl::in_place_t, Arg&&... args)
       : ref_(New<T>(std::forward<Arg>(args)...).Share()) {}
 
-  CopyOnWrite(const CopyOnWrite& that) = default;
-  CopyOnWrite(CopyOnWrite&& that) = default;
+  CopyOnWrite(const CopyOnWrite&) = default;
+  CopyOnWrite(CopyOnWrite&&) = default;
   CopyOnWrite& operator=(const CopyOnWrite&) = default;
-  CopyOnWrite& operator=(CopyOnWrite&& that) = default;
+  CopyOnWrite& operator=(CopyOnWrite&&) = default;
 
-  // These operators are intentionally not qualified with `const` to
-  // incentivize passing the pointer by value.
-  const T& operator*() { return *ref_; }
-  const T* operator->() { return &this->operator*(); }
+  const T& operator*() const { return *ref_; }
+  const T* operator->() const { return &this->operator*(); }
 
   // If this instance is the sole owner of `T`, returns it.
   // Otherwise makes a new copy on the heap, points this object to it, and
@@ -60,6 +55,8 @@ class CopyOnWrite {
   // reference and rather call `as_mutable()` repeatedly as needed.
   // The `with` functions below provide a safer alternative.
   T& as_mutable() {
+    static_assert(std::is_copy_constructible<T>::value,
+                  "T must be copy-constructible");
     auto as_owned = std::move(ref_).AttemptToClaim();
     Ref<T> owned = absl::holds_alternative<Ref<T>>(as_owned)
                        ? absl::get<Ref<T>>(std::move(as_owned))
