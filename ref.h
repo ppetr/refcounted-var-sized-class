@@ -27,6 +27,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -187,8 +188,8 @@ class Ref final
   Ref &operator=(Ref const &other) = default;
   Ref &operator=(Ref &&other) = default;
 
-  bool operator==(nullptr_t) const { return Base::buffer_ == nullptr; }
-  bool operator!=(nullptr_t) const { return Base::buffer_ != nullptr; }
+  bool operator==(std::nullptr_t) const { return Base::buffer_ == nullptr; }
+  bool operator!=(std::nullptr_t) const { return Base::buffer_ != nullptr; }
 
   friend class Ref<typename std::add_const<T>::type, Alloc>;
   friend class Ref<typename std::remove_const<T>::type, Alloc>;

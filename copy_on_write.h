@@ -15,6 +15,7 @@
 #ifndef _COPY_ON_WRITE_H
 #define _COPY_ON_WRITE_H
 
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 
@@ -38,7 +39,7 @@ class CopyOnWrite {
   explicit CopyOnWrite(absl::in_place_t, Arg&&... args)
       : ref_(New<T>(std::forward<Arg>(args)...).Share()) {}
   // TODO: Replace with a specialization of `absl::optional<CopyOnWrite>`.
-  explicit CopyOnWrite(nullptr_t) : ref_(nullptr) {}
+  explicit CopyOnWrite(std::nullptr_t) : ref_(nullptr) {}
 
   CopyOnWrite(const CopyOnWrite&) = default;
   CopyOnWrite(CopyOnWrite&&) = default;
@@ -46,8 +47,8 @@ class CopyOnWrite {
   CopyOnWrite& operator=(CopyOnWrite&&) = default;
 
   // TODO: Replace with a specialization of `absl::optional<CopyOnWrite>`.
-  bool operator==(nullptr_t) const { return ref_ == nullptr; }
-  bool operator!=(nullptr_t) const { return ref_ != nullptr; }
+  bool operator==(std::nullptr_t) const { return ref_ == nullptr; }
+  bool operator!=(std::nullptr_t) const { return ref_ != nullptr; }
 
   const T& operator*() const { return *ref_; }
   const T* operator->() const { return &this->operator*(); }
