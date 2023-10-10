@@ -116,3 +116,7 @@ target_link_libraries(copy_on_write INTERFACE ref absl::core_headers absl::utili
 add_executable(copy_on_write_test copy_on_write_test.cc)
 target_link_libraries(copy_on_write_test copy_on_write absl::base absl::optional absl::strings absl::utility GTest::gtest_main)
 add_test(NAME copy_on_write_test COMMAND copy_on_write_test)
+
+add_executable(copy_on_write_benchmark copy_on_write_benchmark.cc)
+target_link_libraries(copy_on_write_benchmark copy_on_write absl::utility  benchmark::benchmark_main)
+add_test(NAME copy_on_write_benchmark COMMAND copy_on_write_benchmark)
