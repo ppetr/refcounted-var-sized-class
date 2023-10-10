@@ -114,5 +114,5 @@ target_include_directories(copy_on_write INTERFACE .)
 target_link_libraries(copy_on_write INTERFACE ref absl::core_headers absl::utility)
 
 add_executable(copy_on_write_test copy_on_write_test.cc)
-target_link_libraries(copy_on_write_test copy_on_write absl::optional absl::strings absl::utility GTest::gtest_main)
+target_link_libraries(copy_on_write_test copy_on_write absl::base absl::optional absl::strings absl::utility GTest::gtest_main)
 add_test(NAME copy_on_write_test COMMAND copy_on_write_test)

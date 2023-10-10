@@ -18,6 +18,7 @@
 #include <string>
 #include <type_traits>
 
+#include "absl/base/casts.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "absl/utility/utility.h"
@@ -43,7 +44,9 @@ TEST(CopyOnWriteTest, ConstructsInPlace) {
 
 TEST(CopyOnWriteTest, Moves) {
   CopyOnWrite<std::string> original(absl::in_place, kText);
+  CopyOnWrite<std::string>& ref_original = original;
   CopyOnWrite<std::string> cow = std::move(original);
+  EXPECT_EQ(ref_original, nullptr);
   EXPECT_EQ(*cow, kText);
   EXPECT_EQ(cow.as_mutable(), kText);
 }
@@ -94,7 +97,8 @@ struct Message::Data {
 };
 
 absl::string_view Message::value() const {
-  return data_->value ? static_cast<absl::string_view>(**data_->value) : "";
+  return data_->value ? absl::implicit_cast<absl::string_view>(**data_->value)
+                      : "";
 }
 std::string& Message::mutable_value() {
   Data& data = data_.as_mutable();
