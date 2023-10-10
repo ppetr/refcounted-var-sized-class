@@ -58,13 +58,13 @@ class Refcount {
       // decrementing it below.
       return true;
     }
-    int32_t refcount = count_.fetch_sub(1, std::memory_order_acq_rel);
+    int_fast32_t refcount = count_.fetch_sub(1, std::memory_order_acq_rel);
     assert(refcount > 0);
     return refcount == 1;
   }
 
  private:
-  std::atomic<int32_t> count_;
+  std::atomic<int_fast32_t> count_;
 };
 
 // Keeps a `Refcount`-ed instance of `T`.
