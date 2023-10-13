@@ -38,6 +38,9 @@ namespace refptr {
 //    In particular programs should not depend on pointer (in)equality of
 //    instances.
 //
+// `CopyOnWriteNoDef<T>` then satisfies the same properties, allowing easy
+// nesting of data structures.
+//
 // Instances should be always passed by value, not by reference.
 template <typename T>
 class CopyOnWriteNoDef {
@@ -99,10 +102,22 @@ class CopyOnWriteNoDef {
   Ref<const T> ref_;
 };
 
-// Manages an instance of `T` on the heap. Copying `CopyOnWriteNoDef<T>` is
+// Manages an instance of `T` on the heap. Copying `CopyOnWrite<T>` is
 // similarly cheap as copying a `shared_ptr`. Actual copying of `T` is deferred
-// until a mutable reference is requested by `as_mutable`. Default creation of
-// instances of `T` is deferred similarly.
+// until a mutable reference is requested by `as_mutable`.
+//
+// Default creation of instances of `T` is deferred similarly:
+// Default-constructed `CopyOnWrite<T>` object references a shared, global,
+// read-only instance of `T` until it is modified for the first time (this
+// state is tracked by the `LazyDefault()` method).
+// This allows easy, direct nesting of data structures as in:
+//
+//     struct Foo {
+//       CopyOnWrite<Foo> nested;
+//     };
+//
+// Unlike `CopyOnWriteNoDef`, `CopyOnWrite` can never be null, and therefore
+// lacks the corresponding constructor and comparison operators.
 //
 // `T` must satisfy the following properties:
 //
@@ -110,6 +125,9 @@ class CopyOnWriteNoDef {
 // 2. `T` must be default-constructible.
 // 3. Two default-constructed instances of `T` must be semantically
 //    indistinguishable from each other.
+//
+// `CopyOnWrite<T>` then satisfies the same properties, allowing easy nesting
+// of data structures.
 //
 // Instances should be always passed by value, not by reference.
 template <typename T>
