@@ -85,7 +85,7 @@ class CopyOnWriteNoDef {
  protected:
   struct ExtractOrCopy {
     Ref<T> operator()(Ref<T> owned) { return owned; }
-    Ref<T> operator()(Ref<const T> copy) { return New<T>(*copy); }
+    Ref<T> operator()(const Ref<const T>& copy) { return New<T>(*copy); }
   };
 
   explicit CopyOnWriteNoDef(Ref<const T> ref) : ref_(std::move(ref)) {}
