@@ -33,6 +33,17 @@ static_assert(
 
 constexpr absl::string_view kText = "Lorem ipsum dolor sit amet";
 
+TEST(CopyOnWriteTest, DefaultConstructs) {
+  CopyOnWrite<std::string> cow;
+  EXPECT_TRUE(cow->empty());  // Test operator->.
+  EXPECT_TRUE(cow.LazyDefault());
+  EXPECT_EQ(*cow, "");
+  cow.as_mutable() = std::string(kText);
+  EXPECT_FALSE(cow->empty());  // Test operator->.
+  EXPECT_FALSE(cow.LazyDefault());
+  EXPECT_EQ(*cow, kText);
+}
+
 TEST(CopyOnWriteTest, ConstructsInPlace) {
   CopyOnWrite<std::string> cow(absl::in_place, kText);
   EXPECT_EQ(*cow, kText);
@@ -46,6 +57,8 @@ TEST(CopyOnWriteTest, Moves) {
   CopyOnWrite<std::string> cow = std::move(original);
   EXPECT_EQ(*cow, kText);
   EXPECT_EQ(cow.as_mutable(), kText);
+  EXPECT_TRUE(ref_original.LazyDefault())
+      << "A moved-out instance should be empty again";
 }
 
 TEST(CopyOnWriteTest, CopiesByWithMutation) {

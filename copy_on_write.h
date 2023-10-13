@@ -127,11 +127,14 @@ class CopyOnWrite : protected CopyOnWriteNoDef<T> {
   CopyOnWrite& operator=(CopyOnWrite&&) = default;
 
   const T& operator*() const {
-    return (CopyOnWriteNoDef<T>::ref_ == nullptr)
-               ? SharedDefault()
-               : CopyOnWriteNoDef<T>::operator*();
+    return LazyDefault() ? SharedDefault() : CopyOnWriteNoDef<T>::operator*();
   }
   const T* operator->() const { return &this->operator*(); }
+
+  // Return `true` iff this instance was default-constructed and unmodified
+  // yet, in which case `operator*` returns a shared instance of `const& T`.
+  // Once `as_mutable()` is called, this always returns `false`.
+  bool LazyDefault() const { return CopyOnWriteNoDef<T>::ref_ == nullptr; }
 
   // If this instance is the sole owner of `T`, returns it.
   // Otherwise makes a new copy on the heap, points this object to it, and
@@ -142,7 +145,7 @@ class CopyOnWrite : protected CopyOnWriteNoDef<T> {
   // reference and rather call `as_mutable()` repeatedly as needed.
   // The `with` functions below provide a safer alternative.
   T& as_mutable() {
-    if (CopyOnWriteNoDef<T>::ref_ == nullptr) {
+    if (LazyDefault()) {
       return CopyOnWriteNoDef<T>::assign(New<T>());
     }
     return CopyOnWriteNoDef<T>::as_mutable();
