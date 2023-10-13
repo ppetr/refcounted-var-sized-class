@@ -64,10 +64,8 @@ class CopyOnWriteNoDef {
   T& as_mutable() {
     static_assert(std::is_copy_constructible<T>::value,
                   "T must be copy-constructible");
-    auto as_owned = std::move(ref_).AttemptToClaim();
-    return assign(absl::holds_alternative<Ref<T>>(as_owned)
-                      ? absl::get<Ref<T>>(std::move(as_owned))
-                      : New<T>(*absl::get<Ref<const T>>(as_owned)));
+    return assign(
+        absl::visit(ExtractOrCopy(), std::move(ref_).AttemptToClaim()));
   }
 
   // Modifies a copy of this instance with `mutator`, which receives `T&` as
@@ -85,6 +83,11 @@ class CopyOnWriteNoDef {
   }
 
  protected:
+  struct ExtractOrCopy {
+    Ref<T> operator()(Ref<T> owned) { return owned; }
+    Ref<T> operator()(Ref<const T> copy) { return New<T>(*copy); }
+  };
+
   explicit CopyOnWriteNoDef(Ref<const T> ref) : ref_(std::move(ref)) {}
 
   T& assign(Ref<T> owned) {
