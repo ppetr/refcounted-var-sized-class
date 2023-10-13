@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,32 +25,112 @@
 
 namespace refptr {
 
-// Manages an instance of `T` on the heap. Copying `CopyOnWrite<T>` is as
-// comparably cheap to copying a `shared_ptr`. The actual copying of `T` is
-// deferred until a mutable reference is requested by `as_mutable`.
+// Manages an instance of `T` on the heap. Copying `CopyOnWriteNoDef<T>` is
+// similarly cheap as copying a `shared_ptr`. Actual copying of `T` is deferred
+// until a mutable reference is requested by `as_mutable`.
+//
+// `T` must satisfy the following properties:
+//
+// 1. Must be copy-constructible.
+// 2. Allow multi-threaded access to `const T&` (assuming no thread accesses it
+//    mutably).
+// 3. Copies of `T` must be semantically indistinguishable from each other.
+//    In particular programs should not depend on pointer (in)equality of
+//    instances.
 //
 // Instances should be always passed by value, not by reference.
 template <typename T>
-class CopyOnWrite {
+class CopyOnWriteNoDef {
  public:
   using element_type = T;
 
   template <typename... Arg>
-  explicit CopyOnWrite(absl::in_place_t, Arg&&... args)
+  explicit CopyOnWriteNoDef(absl::in_place_t, Arg&&... args)
       : ref_(New<T>(std::forward<Arg>(args)...).Share()) {}
-  // TODO: Replace with a specialization of `absl::optional<CopyOnWrite>`.
-  explicit CopyOnWrite(std::nullptr_t) : ref_(nullptr) {}
+  explicit CopyOnWriteNoDef(std::nullptr_t) : ref_(nullptr) {}
+
+  CopyOnWriteNoDef(const CopyOnWriteNoDef&) = default;
+  CopyOnWriteNoDef(CopyOnWriteNoDef&&) = default;
+  CopyOnWriteNoDef& operator=(const CopyOnWriteNoDef&) = default;
+  CopyOnWriteNoDef& operator=(CopyOnWriteNoDef&&) = default;
+
+  bool operator==(std::nullptr_t) const { return ref_ == nullptr; }
+  bool operator!=(std::nullptr_t) const { return ref_ != nullptr; }
+
+  const T& operator*() const { return *ref_; }
+  const T* operator->() const { return &this->operator*(); }
+
+  // See `CopyOnWrite<T>::as_mutable` below.
+  T& as_mutable() {
+    static_assert(std::is_copy_constructible<T>::value,
+                  "T must be copy-constructible");
+    auto as_owned = std::move(ref_).AttemptToClaim();
+    return assign(absl::holds_alternative<Ref<T>>(as_owned)
+                      ? absl::get<Ref<T>>(std::move(as_owned))
+                      : New<T>(*absl::get<Ref<const T>>(as_owned)));
+  }
+
+  // Modifies a copy of this instance with `mutator`, which receives `T&` as
+  // its only argument. Returns the modified copy.
+  template <typename F>
+  ABSL_MUST_USE_RESULT CopyOnWriteNoDef with(F&& mutator) const& {
+    return CopyOnWriteNoDef(*this).with(std::forward<F>(mutator));
+  }
+  // Consumes `*`this`` to modify it, making a copy of the pointed-to value if
+  // necessary, and returns a pointer to the result.
+  template <typename F>
+  ABSL_MUST_USE_RESULT CopyOnWriteNoDef with(F&& mutator) && {
+    std::forward<F>(mutator)(as_mutable());
+    return std::move(*this);
+  }
+
+ protected:
+  explicit CopyOnWriteNoDef(Ref<const T> ref) : ref_(std::move(ref)) {}
+
+  T& assign(Ref<T> owned) {
+    T& value = *owned;
+    ref_ = std::move(owned).Share();
+    return value;
+  }
+
+  Ref<const T> ref_;
+};
+
+// Manages an instance of `T` on the heap. Copying `CopyOnWriteNoDef<T>` is
+// similarly cheap as copying a `shared_ptr`. Actual copying of `T` is deferred
+// until a mutable reference is requested by `as_mutable`. Default creation of
+// instances of `T` is deferred similarly.
+//
+// `T` must satisfy the following properties:
+//
+// 1. All requirements of `CopyOnWriteNoDef` above.
+// 2. `T` must be default-constructible.
+// 3. Two default-constructed instances of `T` must be semantically
+//    indistinguishable from each other.
+//
+// Instances should be always passed by value, not by reference.
+template <typename T>
+class CopyOnWrite : protected CopyOnWriteNoDef<T> {
+ public:
+  using element_type = T;
+
+  // Construct a lazily initialized instance that returns a shared,
+  // default-constructed `const T&` instance until modified.
+  CopyOnWrite() : CopyOnWriteNoDef<T>(nullptr) {}
+  template <typename... Arg>
+  explicit CopyOnWrite(absl::in_place_t, Arg&&... args)
+      : CopyOnWriteNoDef<T>(absl::in_place, std::forward<Arg>(args)...) {}
 
   CopyOnWrite(const CopyOnWrite&) = default;
   CopyOnWrite(CopyOnWrite&&) = default;
   CopyOnWrite& operator=(const CopyOnWrite&) = default;
   CopyOnWrite& operator=(CopyOnWrite&&) = default;
 
-  // TODO: Replace with a specialization of `absl::optional<CopyOnWrite>`.
-  bool operator==(std::nullptr_t) const { return ref_ == nullptr; }
-  bool operator!=(std::nullptr_t) const { return ref_ != nullptr; }
-
-  const T& operator*() const { return *ref_; }
+  const T& operator*() const {
+    return (CopyOnWriteNoDef<T>::ref_ == nullptr)
+               ? SharedDefault()
+               : CopyOnWriteNoDef<T>::operator*();
+  }
   const T* operator->() const { return &this->operator*(); }
 
   // If this instance is the sole owner of `T`, returns it.
@@ -62,15 +142,10 @@ class CopyOnWrite {
   // reference and rather call `as_mutable()` repeatedly as needed.
   // The `with` functions below provide a safer alternative.
   T& as_mutable() {
-    static_assert(std::is_copy_constructible<T>::value,
-                  "T must be copy-constructible");
-    auto as_owned = std::move(ref_).AttemptToClaim();
-    Ref<T> owned = absl::holds_alternative<Ref<T>>(as_owned)
-                       ? absl::get<Ref<T>>(std::move(as_owned))
-                       : New<T>(*absl::get<Ref<const T>>(as_owned));
-    T& value = *owned;
-    ref_ = std::move(owned).Share();
-    return value;
+    if (CopyOnWriteNoDef<T>::ref_ == nullptr) {
+      return CopyOnWriteNoDef<T>::assign(New<T>());
+    }
+    return CopyOnWriteNoDef<T>::as_mutable();
   }
 
   // Modifies a copy of this instance with `mutator`, which receives `T&` as
@@ -83,12 +158,15 @@ class CopyOnWrite {
   // necessary, and returns a pointer to the result.
   template <typename F>
   ABSL_MUST_USE_RESULT CopyOnWrite with(F&& mutator) && {
-    std::forward<F>(mutator)(as_mutable());
+    std::forward<F>(mutator)(CopyOnWriteNoDef<T>::as_mutable());
     return std::move(*this);
   }
 
- private:
-  Ref<const T> ref_;
+ protected:
+  static const T& SharedDefault() {
+    static const T instance;
+    return instance;
+  }
 };
 
 }  // namespace refptr

@@ -18,9 +18,7 @@
 #include <string>
 #include <type_traits>
 
-#include "absl/base/casts.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/utility/utility.h"
 #include "gtest/gtest.h"
 
@@ -46,7 +44,6 @@ TEST(CopyOnWriteTest, Moves) {
   CopyOnWrite<std::string> original(absl::in_place, kText);
   CopyOnWrite<std::string>& ref_original = original;
   CopyOnWrite<std::string> cow = std::move(original);
-  EXPECT_EQ(ref_original, nullptr);
   EXPECT_EQ(*cow, kText);
   EXPECT_EQ(cow.as_mutable(), kText);
 }
@@ -66,58 +63,22 @@ TEST(CopyOnWriteTest, CopiesByWithMutation) {
 // An example of a data message object, similar to a proto-buf.
 class Message {
  public:
-  Message() : Message(Empty()) {}
+  Message() = default;
   Message(const Message&) = default;
   Message(Message&&) = default;
   Message& operator=(const Message&) = default;
   Message& operator=(Message&&) = default;
 
-  absl::string_view value() const;
-  std::string& mutable_value();
+  absl::string_view value() const { return *value_; }
+  std::string& mutable_value() { return value_.as_mutable(); }
 
-  const Message& nested() const;
-  Message& mutable_nested();
+  const Message& nested() const { return *nested_; }
+  Message& mutable_nested() { return nested_.as_mutable(); }
 
  private:
-  struct Data;
-
-  Message(absl::in_place_t) : data_(absl::in_place) {}
-
-  static const Message& Empty() {
-    static const Message* const empty = new Message(absl::in_place);
-    return *empty;
-  }
-
-  CopyOnWrite<Data> data_;
+  CopyOnWrite<std::string> value_;
+  CopyOnWrite<Message> nested_;
 };
-
-struct Message::Data {
-  absl::optional<CopyOnWrite<std::string>> value;
-  absl::optional<Message> nested;
-};
-
-absl::string_view Message::value() const {
-  return data_->value ? absl::implicit_cast<absl::string_view>(**data_->value)
-                      : "";
-}
-std::string& Message::mutable_value() {
-  Data& data = data_.as_mutable();
-  if (!data.value) {
-    data.value.emplace(absl::in_place);
-  }
-  return data.value->as_mutable();
-}
-
-const Message& Message::nested() const {
-  return data_->nested ? *data_->nested : Message::Empty();
-}
-Message& Message::mutable_nested() {
-  Data& data = data_.as_mutable();
-  if (!data.nested) {
-    data.nested.emplace();
-  }
-  return *data.nested;
-}
 
 TEST(CopyOnWriteTest, MessagesExampleWorks) {
   Message message;
