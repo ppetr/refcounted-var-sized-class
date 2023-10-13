@@ -84,9 +84,13 @@ class Message {
 
   absl::string_view value() const { return *value_; }
   std::string& mutable_value() { return value_.as_mutable(); }
+  bool has_value() const { return !value_.LazyDefault(); }
+  void clear_value() { value_ = {}; }
 
   const Message& nested() const { return *nested_; }
   Message& mutable_nested() { return nested_.as_mutable(); }
+  bool has_nested() const { return !nested_.LazyDefault(); }
+  void clear_nested() { nested_ = {}; }
 
  private:
   CopyOnWrite<std::string> value_;
@@ -95,11 +99,19 @@ class Message {
 
 TEST(CopyOnWriteTest, MessagesExampleWorks) {
   Message message;
+  EXPECT_FALSE(message.has_value());
   message.mutable_value() = "foo";
-  message.mutable_nested().mutable_value() = "bar";
+  EXPECT_TRUE(message.has_value());
   EXPECT_EQ(message.value(), "foo");
+
+  EXPECT_FALSE(message.has_nested());
+  message.mutable_nested().mutable_value() = "bar";
+  EXPECT_TRUE(message.has_nested());
   EXPECT_EQ(message.nested().value(), "bar");
+
+  EXPECT_FALSE(message.nested().has_nested());
   EXPECT_EQ(message.nested().nested().value(), "");
+  EXPECT_FALSE(message.nested().nested().has_value());
 }
 
 }  // namespace
