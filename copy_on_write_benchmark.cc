@@ -29,7 +29,7 @@ namespace {
 static void BM_MutatingOwned(benchmark::State& state) {
   CopyOnWrite<benchmark::IterationCount> value(absl::in_place);
   for (auto _ : state) {
-    auto& ref = value.as_mutable();
+    auto& ref = value.AsMutable();
     ref = state.iterations();
     benchmark::DoNotOptimize(ref);
     benchmark::ClobberMemory();
@@ -41,7 +41,7 @@ static void BM_MutatingCopy(benchmark::State& state) {
   CopyOnWrite<benchmark::IterationCount> value(absl::in_place);
   for (auto _ : state) {
     CopyOnWrite<benchmark::IterationCount> copy(value);
-    auto& ref = copy.as_mutable();
+    auto& ref = copy.AsMutable();
     ref = state.iterations();
     benchmark::DoNotOptimize(ref);
     benchmark::ClobberMemory();

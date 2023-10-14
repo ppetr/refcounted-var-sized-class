@@ -38,7 +38,7 @@ TEST(CopyOnWriteTest, DefaultConstructs) {
   EXPECT_TRUE(cow->empty());  // Test operator->.
   EXPECT_TRUE(cow.LazyDefault());
   EXPECT_EQ(*cow, "");
-  cow.as_mutable() = std::string(kText);
+  cow.AsMutable() = std::string(kText);
   EXPECT_FALSE(cow->empty());  // Test operator->.
   EXPECT_FALSE(cow.LazyDefault());
   EXPECT_EQ(*cow, kText);
@@ -51,7 +51,7 @@ TEST(CopyOnWriteTest, ConstructsInPlace) {
   CopyOnWrite<std::string> cow(absl::in_place, kText);
   EXPECT_EQ(*cow, kText);
   EXPECT_FALSE(cow->empty());  // Test operator->.
-  EXPECT_EQ(cow.as_mutable(), kText);
+  EXPECT_EQ(cow.AsMutable(), kText);
 }
 
 TEST(CopyOnWriteTest, Moves) {
@@ -59,7 +59,7 @@ TEST(CopyOnWriteTest, Moves) {
   CopyOnWrite<std::string>& ref_original = original;
   CopyOnWrite<std::string> cow = std::move(original);
   EXPECT_EQ(*cow, kText);
-  EXPECT_EQ(cow.as_mutable(), kText);
+  EXPECT_EQ(cow.AsMutable(), kText);
   EXPECT_TRUE(ref_original.LazyDefault())
       << "A moved-out instance should be empty again";
 }
@@ -67,16 +67,17 @@ TEST(CopyOnWriteTest, Moves) {
 TEST(CopyOnWriteTest, CopiesByWithMutation) {
   CopyOnWrite<std::string> original(absl::in_place, kText);
   CopyOnWrite<std::string> copy =
-      original.with([](std::string& s) { s = "other"; });
+      original.With([](std::string& s) { s = "other"; });
   // Original.
   EXPECT_EQ(*original, kText);
-  EXPECT_EQ(original.as_mutable(), kText);
+  EXPECT_EQ(original.AsMutable(), kText);
   // Copy.
   EXPECT_EQ(*copy, "other");
-  EXPECT_EQ(copy.as_mutable(), "other");
+  EXPECT_EQ(copy.AsMutable(), "other");
 }
 
-// An example of a data message object, similar to a proto-buf.
+// An example of a data message object that exposes the data it manages using a
+// protobuf-like interface.
 class Message {
  public:
   Message() = default;
@@ -86,12 +87,12 @@ class Message {
   Message& operator=(Message&&) = default;
 
   absl::string_view value() const { return *value_; }
-  std::string& mutable_value() { return value_.as_mutable(); }
+  std::string& mutable_value() { return value_.AsMutable(); }
   bool has_value() const { return !value_.LazyDefault(); }
   void clear_value() { value_ = {}; }
 
   const Message& nested() const { return *nested_; }
-  Message& mutable_nested() { return nested_.as_mutable(); }
+  Message& mutable_nested() { return nested_.AsMutable(); }
   bool has_nested() const { return !nested_.LazyDefault(); }
   void clear_nested() { nested_ = {}; }
 

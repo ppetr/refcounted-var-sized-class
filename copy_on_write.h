@@ -27,7 +27,7 @@ namespace refptr {
 
 // Manages an instance of `T` on the heap. Copying `CopyOnWriteNoDef<T>` is
 // similarly cheap as copying a `shared_ptr`. Actual copying of `T` is deferred
-// until a mutable reference is requested by `as_mutable`.
+// until a mutable reference is requested by `AsMutable`.
 //
 // `T` must satisfy the following properties:
 //
@@ -63,25 +63,25 @@ class CopyOnWriteNoDef {
   const T& operator*() const { return *ref_; }
   const T* operator->() const { return &this->operator*(); }
 
-  // See `CopyOnWrite<T>::as_mutable` below.
-  T& as_mutable() {
+  // See `CopyOnWrite<T>::AsMutable` below.
+  T& AsMutable() {
     static_assert(std::is_copy_constructible<T>::value,
                   "T must be copy-constructible");
-    return assign(
+    return Adopt(
         absl::visit(ExtractOrCopy(), std::move(ref_).AttemptToClaim()));
   }
 
   // Modifies a copy of this instance with `mutator`, which receives `T&` as
   // its only argument. Returns the modified copy.
   template <typename F>
-  ABSL_MUST_USE_RESULT CopyOnWriteNoDef with(F&& mutator) const& {
-    return CopyOnWriteNoDef(*this).with(std::forward<F>(mutator));
+  ABSL_MUST_USE_RESULT CopyOnWriteNoDef With(F&& mutator) const& {
+    return CopyOnWriteNoDef(*this).With(std::forward<F>(mutator));
   }
-  // Consumes `*`this`` to modify it, making a copy of the pointed-to value if
+  // Consumes `*this` to modify it, making a copy of the pointed-to value if
   // necessary, and returns a pointer to the result.
   template <typename F>
-  ABSL_MUST_USE_RESULT CopyOnWriteNoDef with(F&& mutator) && {
-    std::forward<F>(mutator)(as_mutable());
+  ABSL_MUST_USE_RESULT CopyOnWriteNoDef With(F&& mutator) && {
+    std::forward<F>(mutator)(AsMutable());
     return std::move(*this);
   }
 
@@ -93,7 +93,7 @@ class CopyOnWriteNoDef {
 
   explicit CopyOnWriteNoDef(Ref<const T> ref) : ref_(std::move(ref)) {}
 
-  T& assign(Ref<T> owned) {
+  T& Adopt(Ref<T> owned) {
     T& value = *owned;
     ref_ = std::move(owned).Share();
     return value;
@@ -104,12 +104,12 @@ class CopyOnWriteNoDef {
 
 // Manages an instance of `T` on the heap. Copying `CopyOnWrite<T>` is
 // similarly cheap as copying a `shared_ptr`. Actual copying of `T` is deferred
-// until a mutable reference is requested by `as_mutable`.
+// until a mutable reference is requested by `AsMutable`.
 //
 // Default creation of instances of `T` is deferred similarly:
 // Default-constructed `CopyOnWrite<T>` object references a shared, global,
 // read-only instance of `T` until it is modified for the first time (this
-// state is tracked by the `LazyDefault()` method).
+// state is tracked by the `LazyDefault()` method.).
 // This allows easy, direct nesting of data structures as in:
 //
 //     struct Foo {
@@ -154,7 +154,7 @@ class CopyOnWrite : protected CopyOnWriteNoDef<T> {
 
   // Return `true` iff this instance was default-constructed and unmodified
   // yet, in which case `operator*` returns a shared instance of `const& T`.
-  // Once `as_mutable()` is called, this always returns `false`.
+  // Once `AsMutable()` is called, this always returns `false`.
   bool LazyDefault() const { return CopyOnWriteNoDef<T>::ref_ == nullptr; }
 
   // If this instance is the sole owner of `T`, returns it.
@@ -163,26 +163,27 @@ class CopyOnWrite : protected CopyOnWriteNoDef<T> {
   //
   // Important: The returned reference is valid only until this pointer is
   // copied or destroyed. Therefore callers should not store the returned
-  // reference and rather call `as_mutable()` repeatedly as needed.
-  // The `with` functions below provide a safer alternative.
-  T& as_mutable() {
+  // reference and rather call `AsMutable()` repeatedly as needed.
+  // The `With` functions below provide a safer alternative.
+  T& AsMutable() {
     if (LazyDefault()) {
-      return CopyOnWriteNoDef<T>::assign(New<T>());
+      return CopyOnWriteNoDef<T>::Adopt(New<T>());
     }
-    return CopyOnWriteNoDef<T>::as_mutable();
+    return CopyOnWriteNoDef<T>::AsMutable();
   }
 
   // Modifies a copy of this instance with `mutator`, which receives `T&` as
-  // its only argument. Returns the modified copy.
+  // its only argument. Returns the modified copy, while `*this` remains
+  // unchanged.
   template <typename F>
-  ABSL_MUST_USE_RESULT CopyOnWrite with(F&& mutator) const& {
-    return CopyOnWrite(*this).with(std::forward<F>(mutator));
+  ABSL_MUST_USE_RESULT CopyOnWrite With(F&& mutator) const& {
+    return CopyOnWrite(*this).With(std::forward<F>(mutator));
   }
-  // Consumes `*`this`` to modify it, making a copy of the pointed-to value if
-  // necessary, and returns a pointer to the result.
+  // Consumes `*this` to modify it, making a copy of the pointed-to value if
+  // necessary, and returns a pointer with the modified result.
   template <typename F>
-  ABSL_MUST_USE_RESULT CopyOnWrite with(F&& mutator) && {
-    std::forward<F>(mutator)(CopyOnWriteNoDef<T>::as_mutable());
+  ABSL_MUST_USE_RESULT CopyOnWrite With(F&& mutator) && {
+    std::forward<F>(mutator)(CopyOnWriteNoDef<T>::AsMutable());
     return std::move(*this);
   }
 
