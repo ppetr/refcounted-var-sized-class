@@ -66,13 +66,13 @@ class RefBase<T, Alloc, OwnershipTraits::shared> {
   RefBase(RefBase &&other) { (*this) = std::move(other); }
 
   inline RefBase &operator=(RefBase const &other) {
-    assert(other.buffer_ != nullptr);
     Clear();
-    (buffer_ = other.buffer_)->refcount.Inc();
+    if ((buffer_ = other.buffer_) != nullptr) {
+      buffer_->refcount.Inc();
+    }
     return *this;
   }
   inline RefBase &operator=(RefBase &&other) {
-    assert(other.buffer_ != nullptr);
     Clear();
     std::swap(buffer_, other.buffer_);
     return *this;

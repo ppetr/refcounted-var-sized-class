@@ -42,6 +42,9 @@ TEST(CopyOnWriteTest, DefaultConstructs) {
   EXPECT_FALSE(cow->empty());  // Test operator->.
   EXPECT_FALSE(cow.LazyDefault());
   EXPECT_EQ(*cow, kText);
+  cow = {};
+  EXPECT_TRUE(cow.LazyDefault());
+  EXPECT_EQ(*cow, "");
 }
 
 TEST(CopyOnWriteTest, ConstructsInPlace) {
