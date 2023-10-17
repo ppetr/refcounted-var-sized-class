@@ -17,6 +17,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 
@@ -30,8 +31,15 @@ class Refcount {
 
   // Increments the reference count. Imposes no memory ordering.
   inline void Inc() {
-    // Other threads must observe the increment.
-    count_.fetch_add(1, std::memory_order_release);
+    // Similarly to
+    // https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp/+/6d2ed7db891d53d83c5202a9368e4b19e4ca61f0/absl/strings/internal/cord_internal.h#155
+    // this can be just _relaxed_:
+    // This thread already has at least one reference count in `count_`.
+    // Therefore other threads won't decrement to 0 even if they don't observe
+    // this operation immediately. And if the added reference count is passed
+    // to a different thread, that operation needs to ensure proper
+    // synchronization barriers on its own.
+    count_.fetch_add(1, std::memory_order_relaxed);
   }
 
   // Returns whether the atomic integer is 1.
