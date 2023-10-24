@@ -43,7 +43,7 @@ namespace refptr {
 //
 // Instances should be always passed by value, not by reference.
 template <typename T>
-class CopyOnWriteNoDef {
+class ABSL_ATTRIBUTE_TRIVIAL_ABI CopyOnWriteNoDef {
  public:
   using element_type = T;
 
@@ -131,7 +131,7 @@ class CopyOnWriteNoDef {
 //
 // Instances should be always passed by value, not by reference.
 template <typename T>
-class CopyOnWrite : protected CopyOnWriteNoDef<T> {
+class ABSL_ATTRIBUTE_TRIVIAL_ABI CopyOnWrite : protected CopyOnWriteNoDef<T> {
  public:
   using element_type = T;
 

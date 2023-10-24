@@ -53,7 +53,7 @@ endfunction()
 FetchLibrary(
     absl
     GIT_REPOSITORY https://github.com/abseil/abseil-cpp.git
-    GIT_TAG        8c0b94e793a66495e0b1f34a5eb26bd7dc672db0  # lts_2022_06_23
+    GIT_TAG        fb3621f4f897824c0dbe0615fa94543df6192f30  # lts_2023_08_02
     FIND_PACKAGE_ARGS REQUIRED NAMES absl
     )
 
@@ -111,7 +111,7 @@ add_test(NAME int_or_ptr_test COMMAND int_or_ptr_test)
 
 add_library(copy_on_write INTERFACE)
 target_include_directories(copy_on_write INTERFACE .)
-target_link_libraries(copy_on_write INTERFACE ref absl::core_headers absl::utility)
+target_link_libraries(copy_on_write INTERFACE ref absl::base absl::core_headers absl::utility)
 
 add_executable(copy_on_write_test copy_on_write_test.cc)
 target_link_libraries(copy_on_write_test copy_on_write absl::strings absl::utility GTest::gtest_main)

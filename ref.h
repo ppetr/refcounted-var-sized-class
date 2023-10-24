@@ -33,6 +33,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "absl/base/attributes.h"
 #include "absl/types/variant.h"
 #include "absl/utility/utility.h"
 #include "reference_counted.h"
@@ -40,7 +41,7 @@
 namespace refptr {
 
 template <typename T, typename Alloc>
-class Ref;
+class ABSL_ATTRIBUTE_TRIVIAL_ABI Ref;
 
 namespace internal {
 
@@ -55,10 +56,10 @@ struct BaseOwnershipTraits {
 };
 
 template <typename T, typename Alloc, OwnershipTraits>
-class RefBase;
+class ABSL_ATTRIBUTE_TRIVIAL_ABI RefBase;
 
 template <typename T, typename Alloc>
-class RefBase<T, Alloc, OwnershipTraits::shared> {
+class ABSL_ATTRIBUTE_TRIVIAL_ABI RefBase<T, Alloc, OwnershipTraits::shared> {
  public:
   using element_type = T;
 
@@ -107,7 +108,7 @@ class RefBase<T, Alloc, OwnershipTraits::shared> {
 };
 
 template <typename T, typename Alloc>
-class RefBase<T, Alloc, OwnershipTraits::unique> {
+class ABSL_ATTRIBUTE_TRIVIAL_ABI RefBase<T, Alloc, OwnershipTraits::unique> {
  public:
   using element_type = T;
 
@@ -162,7 +163,7 @@ class RefBase<T, Alloc, OwnershipTraits::unique> {
 // `Ref<const T>::AttemptToClain()`.
 template <typename T,
           typename Alloc = std::allocator<typename std::remove_const<T>::type>>
-class Ref final
+class ABSL_ATTRIBUTE_TRIVIAL_ABI Ref final
     : public internal::RefBase<typename std::remove_const<T>::type, Alloc,
                                internal::BaseOwnershipTraits<T>::traits> {
   static_assert(
