@@ -40,52 +40,52 @@ struct Foo {
   int value_;
 };
 
-TEST(IntOrPtrTest, ConstructionByDefault) {
-  IntOrPtr<const Foo> value;
+TEST(IntOrRefTest, ConstructionByDefault) {
+  IntOrRef<const Foo> value;
   ASSERT_TRUE(value.has_number());
-  ASSERT_FALSE(value.has_ptr());
+  ASSERT_FALSE(value.has_ref());
   EXPECT_THAT(value.number(), Optional(0));
-  EXPECT_THAT(value.ptr(), Eq(nullptr));
+  EXPECT_THAT(value.ref(), Eq(nullptr));
 }
 
-TEST(IntOrPtrTest, ConstructionOfNumber) {
-  IntOrPtr<const Foo> value(42);
+TEST(IntOrRefTest, ConstructionOfNumber) {
+  IntOrRef<const Foo> value(42);
   ASSERT_TRUE(value.has_number());
-  ASSERT_FALSE(value.has_ptr());
+  ASSERT_FALSE(value.has_ref());
   EXPECT_THAT(value.number(), Optional(42));
-  EXPECT_THAT(value.ptr(), Eq(nullptr));
+  EXPECT_THAT(value.ref(), Eq(nullptr));
   EXPECT_THAT(value.Variant(), VariantWith<intptr_t>(42));
 }
 
-TEST(IntOrPtrTest, MoveAndCopyConstructionOfNumber) {
-  IntOrPtr<const Foo> value(42);
-  IntOrPtr<const Foo> copied(value);
+TEST(IntOrRefTest, MoveAndCopyConstructionOfNumber) {
+  IntOrRef<const Foo> value(42);
+  IntOrRef<const Foo> copied(value);
   EXPECT_THAT(copied.Variant(), VariantWith<intptr_t>(42));
-  IntOrPtr<const Foo> moved(std::move(value));
+  IntOrRef<const Foo> moved(std::move(value));
   EXPECT_THAT(moved.Variant(), VariantWith<intptr_t>(42));
 }
 
-TEST(IntOrPtrTest, ConstructionOfObject) {
+TEST(IntOrRefTest, ConstructionOfObject) {
   int counter = 0;
   {
-    IntOrPtr<const Foo> value(absl::in_place, counter, 42);
+    IntOrRef<const Foo> value(absl::in_place, counter, 42);
     EXPECT_EQ(counter, 1);
     ASSERT_FALSE(value.has_number());
-    ASSERT_TRUE(value.has_ptr());
+    ASSERT_TRUE(value.has_ref());
     EXPECT_THAT(value.number(), absl::nullopt);
-    EXPECT_THAT(value.ptr(), Pointee(Field(&Foo::value_, 42)));
+    EXPECT_THAT(value.ref(), Pointee(Field(&Foo::value_, 42)));
     EXPECT_THAT(value.Variant(), VariantWith<std::reference_wrapper<const Foo>>(
                                      Field(&Foo::value_, 42)));
   }
   EXPECT_EQ(counter, 0);
 }
 
-TEST(IntOrPtrTest, CopyConstructionOfObject) {
+TEST(IntOrRefTest, CopyConstructionOfObject) {
   int counter = 0;
   {
-    IntOrPtr<const Foo> value(absl::in_place, counter, 42);
+    IntOrRef<const Foo> value(absl::in_place, counter, 42);
     EXPECT_EQ(counter, 1);
-    IntOrPtr<const Foo> copy(value);
+    IntOrRef<const Foo> copy(value);
     EXPECT_THAT(copy.Variant(), VariantWith<std::reference_wrapper<const Foo>>(
                                     Field(&Foo::value_, 42)));
     EXPECT_EQ(counter, 1);
@@ -93,12 +93,12 @@ TEST(IntOrPtrTest, CopyConstructionOfObject) {
   EXPECT_EQ(counter, 0);
 }
 
-TEST(IntOrPtrTest, MoveConstructionOfObject) {
+TEST(IntOrRefTest, MoveConstructionOfObject) {
   int counter = 0;
   {
-    IntOrPtr<Foo> value(absl::in_place, counter, 42);
+    IntOrRef<Foo> value(absl::in_place, counter, 42);
     EXPECT_EQ(counter, 1);
-    IntOrPtr<Foo> moved(std::move(value));
+    IntOrRef<Foo> moved(std::move(value));
     EXPECT_THAT(moved.Variant(), VariantWith<std::reference_wrapper<Foo>>(
                                      Field(&Foo::value_, 42)));
     EXPECT_EQ(counter, 1);
@@ -106,46 +106,46 @@ TEST(IntOrPtrTest, MoveConstructionOfObject) {
   EXPECT_EQ(counter, 0);
 }
 
-TEST(IntOrPtrTest, MoveConstructionOfConstFromNonConst) {
-  EXPECT_THAT(IntOrPtr<const Foo>(IntOrPtr<Foo>(42)).number(), Optional(42));
+TEST(IntOrRefTest, MoveConstructionOfConstFromNonConst) {
+  EXPECT_THAT(IntOrRef<const Foo>(IntOrRef<Foo>(42)).number(), Optional(42));
   int counter = 0;
   {
-    IntOrPtr<const Foo> object(IntOrPtr<Foo>(absl::in_place, counter, 73));
-    EXPECT_THAT(object.ptr(), Pointee(Field(&Foo::value_, 73)));
+    IntOrRef<const Foo> object(IntOrRef<Foo>(absl::in_place, counter, 73));
+    EXPECT_THAT(object.ref(), Pointee(Field(&Foo::value_, 73)));
     EXPECT_EQ(counter, 1);
   }
   EXPECT_EQ(counter, 0);
 }
 
-TEST(IntOrPtrTest, MoveAssignment) {
-  IntOrPtr<Foo> value;
+TEST(IntOrRefTest, MoveAssignment) {
+  IntOrRef<Foo> value;
   int counter = 0;
-  value = IntOrPtr<Foo>(absl::in_place, counter, 42);
+  value = IntOrRef<Foo>(absl::in_place, counter, 42);
   EXPECT_THAT(value.Variant(), VariantWith<std::reference_wrapper<Foo>>(
                                    Field(&Foo::value_, 42)));
   EXPECT_EQ(counter, 1);
-  value = IntOrPtr<Foo>(73);
+  value = IntOrRef<Foo>(73);
   EXPECT_THAT(value.Variant(), VariantWith<intptr_t>(73));
   EXPECT_EQ(counter, 0);
 }
 
-TEST(IntOrPtrTest, MoveAssignmentOfConst) {
-  IntOrPtr<const Foo> value;
+TEST(IntOrRefTest, MoveAssignmentOfConst) {
+  IntOrRef<const Foo> value;
   int counter = 0;
-  value = IntOrPtr<const Foo>(absl::in_place, counter, 42);
+  value = IntOrRef<const Foo>(absl::in_place, counter, 42);
   EXPECT_THAT(value.Variant(), VariantWith<std::reference_wrapper<const Foo>>(
                                    Field(&Foo::value_, 42)));
   EXPECT_EQ(counter, 1);
-  value = IntOrPtr<const Foo>(73);
+  value = IntOrRef<const Foo>(73);
   EXPECT_THAT(value.Variant(), VariantWith<intptr_t>(73));
   EXPECT_EQ(counter, 0);
 }
 
-TEST(IntOrPtrTest, CopyAssignment) {
-  IntOrPtr<const Foo> value;
+TEST(IntOrRefTest, CopyAssignment) {
+  IntOrRef<const Foo> value;
   int counter = 0;
   {
-    IntOrPtr<const Foo> copy(absl::in_place, counter, 42);
+    IntOrRef<const Foo> copy(absl::in_place, counter, 42);
     value = copy;
     EXPECT_EQ(counter, 1);
   }
@@ -153,23 +153,23 @@ TEST(IntOrPtrTest, CopyAssignment) {
   EXPECT_THAT(value.Variant(), VariantWith<std::reference_wrapper<const Foo>>(
                                    Field(&Foo::value_, 42)));
   {
-    IntOrPtr<const Foo> copy(73);
+    IntOrRef<const Foo> copy(73);
     value = copy;
     EXPECT_EQ(counter, 0);
   }
   EXPECT_EQ(counter, 0);
 }
 
-TEST(IntOrPtrTest, Equality) {
-  EXPECT_EQ(IntOrPtr<std::string>(42), IntOrPtr<std::string>(42));
-  EXPECT_NE(IntOrPtr<std::string>(42), IntOrPtr<std::string>(73));
-  EXPECT_NE(IntOrPtr<std::string>(42),
-            IntOrPtr<std::string>(absl::in_place, "Foo"));
-  EXPECT_NE(IntOrPtr<intptr_t>(42), IntOrPtr<intptr_t>(absl::in_place, 42));
-  EXPECT_EQ(IntOrPtr<std::string>(absl::in_place, "Foo"),
-            IntOrPtr<std::string>(absl::in_place, "Foo"));
-  EXPECT_NE(IntOrPtr<std::string>(absl::in_place, "Foo"),
-            IntOrPtr<std::string>(absl::in_place, "Bar"));
+TEST(IntOrRefTest, Equality) {
+  EXPECT_EQ(IntOrRef<std::string>(42), IntOrRef<std::string>(42));
+  EXPECT_NE(IntOrRef<std::string>(42), IntOrRef<std::string>(73));
+  EXPECT_NE(IntOrRef<std::string>(42),
+            IntOrRef<std::string>(absl::in_place, "Foo"));
+  EXPECT_NE(IntOrRef<intptr_t>(42), IntOrRef<intptr_t>(absl::in_place, 42));
+  EXPECT_EQ(IntOrRef<std::string>(absl::in_place, "Foo"),
+            IntOrRef<std::string>(absl::in_place, "Foo"));
+  EXPECT_NE(IntOrRef<std::string>(absl::in_place, "Foo"),
+            IntOrRef<std::string>(absl::in_place, "Bar"));
 }
 
 // TODO: Add equality tests.
